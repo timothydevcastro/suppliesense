@@ -1,6 +1,22 @@
 fastapi
 uvicorn[standard]
+
+# config/env
 pydantic-settings
+python-dotenv
+
+# server (keep even if you run uvicorn on Render)
 gunicorn
+
+# database
 sqlalchemy
 psycopg2-binary
+alembic
+
+# auth
+python-jose[cryptography]
+passlib[bcrypt]
+
+# forms/uploads + email validation (commonly used in auth/register)
+python-multipart
+email-validator
