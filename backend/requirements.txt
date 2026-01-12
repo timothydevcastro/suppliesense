@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 pydantic-settings
 gunicorn
+sqlalchemy
+psycopg2-binary
