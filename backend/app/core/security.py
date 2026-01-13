@@ -27,7 +27,13 @@ def verify_password(plain_password: str, hashed_password) -> bool:
     if isinstance(hashed_password, (bytes, bytearray)):
         hashed_password = hashed_password.decode("utf-8", errors="ignore")
 
-    return pwd_context.verify(plain_password or "", str(hashed_password))
+    s = str(hashed_password).strip()
+
+    # unwrap strings like:  b'...'
+    if (s.startswith("b'") and s.endswith("'")) or (s.startswith('b"') and s.endswith('"')):
+        s = s[2:-1]
+
+    return pwd_context.verify(plain_password or "", s)
 
 
 def create_access_token(data: dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
