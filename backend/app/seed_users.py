@@ -8,28 +8,23 @@ from app.models.user import User as UserModel
 
 def _get_hasher():
     """
-    Tries to reuse your project's existing password hashing function.
-    Falls back to passlib bcrypt if your app.core.security doesn't expose one.
+    Reuse project's password hashing function if available.
     """
     try:
-        # common names people use
         from app.core.security import hash_password  # type: ignore
-
         return hash_password
     except Exception:
         pass
 
     try:
         from app.core.security import get_password_hash  # type: ignore
-
         return get_password_hash
     except Exception:
         pass
 
-    # fallback
+    # fallback (shouldn't happen if your app uses app.core.security)
     from passlib.context import CryptContext
-
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
     return pwd_context.hash
 
 
@@ -71,10 +66,26 @@ def seed_users():
     db: Session = SessionLocal()
     try:
         created = 0
+        updated = 0
+
         for s in seeds:
+            hashed = hasher(s["password"])
+
             existing = db.query(UserModel).filter(UserModel.username == s["username"]).first()
             if existing:
-                print(f"✅ Exists: {s['username']} ({existing.role})")
+                # ✅ FORCE RESET PASSWORD HASH (fixes bcrypt 72-byte issue / algo changes)
+                _set_password(existing, hashed)
+
+                # keep role/name in sync too
+                if hasattr(existing, "name"):
+                    existing.name = s["name"]
+                if hasattr(existing, "role"):
+                    existing.role = s["role"]
+                if hasattr(existing, "is_active"):
+                    existing.is_active = True
+
+                updated += 1
+                print(f"♻️ Updated: {s['username']} ({getattr(existing, 'role', 'n/a')})")
                 continue
 
             u = UserModel(
@@ -82,22 +93,22 @@ def seed_users():
                 name=s["name"],
                 role=s["role"],
             )
-
-            hashed = hasher(s["password"])
             _set_password(u, hashed)
 
-            # optional fields (only if your model has them)
             if hasattr(u, "is_active"):
                 setattr(u, "is_active", True)
 
             db.add(u)
             created += 1
+            print(f"✅ Created: {s['username']} ({s['role']})")
 
         db.commit()
-        print(f"\nDone. Created {created} user(s).")
+
+        print(f"\nDone. Created {created} user(s). Updated {updated} user(s).")
         print("\nLogin creds:")
         print(" - manager / manager123")
         print(" - viewer  / viewer123")
+
     finally:
         db.close()
 
