@@ -1,12 +1,16 @@
 import os
+import secrets
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-# ✅ No bcrypt backend, no 72-byte limit, works on Python 3.13
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# Support multiple schemes (old + new)
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256", "bcrypt_sha256", "bcrypt"],
+    deprecated="auto",
+)
 
 SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or "dev-secret-change-me"
 ALGORITHM = "HS256"
@@ -17,8 +21,24 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password or "")
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password or "", hashed_password)
+def verify_password(plain_password: str, hashed_password) -> bool:
+    if hashed_password is None:
+        return False
+
+    # Handle bytes / memoryview coming from DB
+    if isinstance(hashed_password, memoryview):
+        hashed_password = hashed_password.tobytes()
+    if isinstance(hashed_password, (bytes, bytearray)):
+        hashed_password = hashed_password.decode("utf-8", errors="ignore")
+
+    plain_password = plain_password or ""
+    hashed_password = str(hashed_password)
+
+    # If DB contains a non-hash (e.g. plain text), avoid crashing (demo-safe)
+    if not hashed_password.startswith("$"):
+        return secrets.compare_digest(plain_password, hashed_password)
+
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(data: dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
