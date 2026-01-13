@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -11,13 +12,15 @@ from app.core.database import Base
 from app.models.product import Product  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 
-
 config = context.config
+
+# ✅ FORCE Alembic to use DATABASE_URL from environment (Neon)
+config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# ✅ THIS is what enables autogenerate to detect tables/columns
+# ✅ THIS enables autogenerate to detect tables/columns
 target_metadata = Base.metadata
 
 
