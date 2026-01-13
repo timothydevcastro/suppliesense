@@ -1,20 +1,16 @@
 import os
-import secrets
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-# Support multiple schemes (old + new)
-pwd_context = CryptContext(
-    schemes=["pbkdf2_sha256", "bcrypt_sha256", "bcrypt"],
-    deprecated="auto",
-)
+# ✅ ONLY pbkdf2_sha256 (no bcrypt anywhere)
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or "dev-secret-change-me"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))  # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
 
 
 def hash_password(password: str) -> str:
@@ -25,20 +21,13 @@ def verify_password(plain_password: str, hashed_password) -> bool:
     if hashed_password is None:
         return False
 
-    # Handle bytes / memoryview coming from DB
+    # handle bytes/memoryview from DB
     if isinstance(hashed_password, memoryview):
         hashed_password = hashed_password.tobytes()
     if isinstance(hashed_password, (bytes, bytearray)):
         hashed_password = hashed_password.decode("utf-8", errors="ignore")
 
-    plain_password = plain_password or ""
-    hashed_password = str(hashed_password)
-
-    # If DB contains a non-hash (e.g. plain text), avoid crashing (demo-safe)
-    if not hashed_password.startswith("$"):
-        return secrets.compare_digest(plain_password, hashed_password)
-
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(plain_password or "", str(hashed_password))
 
 
 def create_access_token(data: dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
