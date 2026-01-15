@@ -33,6 +33,11 @@ def verify_password(plain_password: str, hashed_password) -> bool:
     if (s.startswith("b'") and s.endswith("'")) or (s.startswith('b"') and s.endswith('"')):
         s = s[2:-1]
 
+    # ✅ if it's NOT a passlib hash, don't crash (prevents 500)
+    # portfolio-safe fallback: treat as plain text compare
+    if not s.startswith("$pbkdf2-sha256$"):
+        return (plain_password or "") == s
+
     return pwd_context.verify(plain_password or "", s)
 
 
