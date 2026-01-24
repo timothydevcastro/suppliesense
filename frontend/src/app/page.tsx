@@ -527,9 +527,12 @@ export default function Home() {
     setHistoryLogs([]);
 
     try {
-      const res = await fetchWithAuth(`${API}/api/audit-logs?product_id=${encodeURIComponent(p.id)}&limit=100`, {
-        headers: makeHeaders(false),
-      });
+      const res = await fetchWithAuth(
+        `${API}/api/audit-logs?product_id=${encodeURIComponent(p.id)}&limit=100`,
+        {
+          headers: makeHeaders(false),
+        }
+      );
       if (!res.ok) {
         const msg = await res.text();
         throw new Error(msg || `HTTP ${res.status}`);
@@ -729,7 +732,11 @@ export default function Home() {
                           {authUser?.name ?? "Not logged in"}
                         </div>
                         <div className="text-xs text-white/60 truncate">
-                          {authUser?.role === "manager" ? "Inventory Manager" : authUser?.role === "viewer" ? "Viewer (read-only)" : "—"}
+                          {authUser?.role === "manager"
+                            ? "Inventory Manager"
+                            : authUser?.role === "viewer"
+                            ? "Viewer (read-only)"
+                            : "—"}
                         </div>
                       </div>
                     </div>
@@ -932,9 +939,7 @@ export default function Home() {
                         <div>
                           <div className="text-xs font-medium text-zinc-500">Inventory list</div>
                           <div className="text-lg font-semibold text-zinc-900 mt-1">Products</div>
-                          <div className="mt-1 text-xs text-zinc-500">
-                            Tip: Use the stepper to adjust stock (Undo works).
-                          </div>
+                          <div className="mt-1 text-xs text-zinc-500">Tip: Use the stepper to adjust stock (Undo works).</div>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -1007,8 +1012,7 @@ export default function Home() {
                               const rop = getReorderPoint(p);
                               const deficit = Math.max(0, rop - (p.quantity ?? 0));
 
-                              const rowEmphasis =
-                                s === "OUT" ? "bg-rose-50/60" : s === "LOW" ? "bg-amber-50/60" : "";
+                              const rowEmphasis = s === "OUT" ? "bg-rose-50/60" : s === "LOW" ? "bg-amber-50/60" : "";
 
                               return (
                                 <tr
@@ -1243,9 +1247,7 @@ export default function Home() {
             <div className="px-6 py-5 border-b border-zinc-200">
               <div className="text-xs font-medium text-zinc-500">Account</div>
               <div className="text-lg font-semibold text-zinc-900 mt-1">Signed in</div>
-              <div className="mt-2 text-sm text-zinc-600">
-                This page uses your JWT token. Role controls what you can edit.
-              </div>
+              <div className="mt-2 text-sm text-zinc-600">This page uses your JWT token. Role controls what you can edit.</div>
             </div>
 
             <div className="px-6 py-5 space-y-3">
@@ -1330,9 +1332,7 @@ export default function Home() {
                           <td className="px-3 py-3 text-zinc-900 font-medium">{log.actor || "system"}</td>
                           <td className="px-3 py-3 text-zinc-700">{prettyAction(log.action)}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-zinc-700">{log.prev_quantity}</td>
-                          <td className="px-3 py-3 text-right tabular-nums text-zinc-900 font-semibold">
-                            {log.new_quantity}
-                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums text-zinc-900 font-semibold">{log.new_quantity}</td>
                           <td className="px-3 py-3 text-right tabular-nums">
                             <span
                               className={[

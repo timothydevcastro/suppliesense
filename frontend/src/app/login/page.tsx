@@ -24,10 +24,10 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // If already logged in, bounce to home
+  // If already logged in, bounce to app page
   useEffect(() => {
     const t = getToken();
-    if (t) router.replace("/");
+    if (t) router.replace("/"); // ✅ Products page is "/"
   }, [router]);
 
   const canSubmit = useMemo(() => {
@@ -62,12 +62,22 @@ export default function LoginPage() {
       }
 
       const data = (await res.json()) as LoginResponse;
-      if (!data?.access_token || !data?.user?.name || !data?.user?.role) {
-        throw new Error("Login response is incomplete.");
-      }
 
+      // HARD validation so we don't silently "log in" without saving anything
+      if (!data?.access_token) throw new Error("No access_token returned.");
+      if (!data?.user) throw new Error("No user returned.");
+      if (!data?.user?.role) throw new Error("User role missing.");
+      if (!data?.user?.name) throw new Error("User name missing.");
+
+      // ✅ THIS IS THE IMPORTANT PART: SAVE TOKEN + USER
       setAuth(data.access_token, data.user);
-      router.replace("/");
+
+      // Debug (optional) – open DevTools Console and you should see this
+      console.log("✅ Logged in. Token saved?", getToken());
+      console.log("✅ User saved:", data.user);
+
+      // Go to app
+      router.replace("/"); // ✅ Products page is "/"
     } catch (e: any) {
       setErr(e?.message ?? "Login failed");
     } finally {
@@ -153,9 +163,7 @@ export default function LoginPage() {
                         <div className="min-w-0">
                           <div className="text-sm text-white font-semibold">Manager</div>
                           <div className="mt-1 text-xs text-white/65">Can add/edit/delete products</div>
-                          <div className="mt-2 text-xs text-white/85 font-mono">
-                            manager / manager123
-                          </div>
+                          <div className="mt-2 text-xs text-white/85 font-mono">manager / manager123</div>
                         </div>
                         <button
                           type="button"
@@ -172,9 +180,7 @@ export default function LoginPage() {
                         <div className="min-w-0">
                           <div className="text-sm text-white font-semibold">Viewer</div>
                           <div className="mt-1 text-xs text-white/65">Read-only access</div>
-                          <div className="mt-2 text-xs text-white/85 font-mono">
-                            viewer / viewer123
-                          </div>
+                          <div className="mt-2 text-xs text-white/85 font-mono">viewer / viewer123</div>
                         </div>
                         <button
                           type="button"
@@ -192,9 +198,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-6 text-[11px] text-white/40">
-                  © SupplySense — Inventory & Reorder demo
-                </div>
+                <div className="mt-auto pt-6 text-[11px] text-white/40">© SupplySense — Inventory & Reorder demo</div>
               </div>
             </div>
           </aside>
