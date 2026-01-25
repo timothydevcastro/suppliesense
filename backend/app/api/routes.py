@@ -1,32 +1,24 @@
 # backend/app/api/routes.py
 
-from fastapi import APIRouter, HTTPException, Depends, Request, status
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse
-from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from typing import List, Optional, Literal
 from sqlalchemy.orm import Session
 from datetime import datetime
 import csv
 import io
-import os
-
-from jose import JWTError, jwt
 
 from app.core.database import SessionLocal
 from app.models.product import Product as ProductModel
 from app.models.audit_log import AuditLog as AuditLogModel
-from app.models.user import User as UserModel
 from app.services.reorder import compute_reorder_fields
 
+# ✅ IMPORTANT FIX:
+# Use the SAME auth dependency used by auth_routes (single source of truth for JWT secret/logic).
+from app.api.deps_auth import get_current_user, require_manager, CurrentUser
+
 router = APIRouter()
-
-# ---------- JWT CONFIG (Step 8: protect routes) ----------
-
-SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY") or "dev-secret-change-me"
-ALGORITHM = os.getenv("JWT_ALGORITHM") or "HS256"
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # ---------- DB DEP ----------
 
@@ -36,58 +28,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# ---------- AUTH DEPS ----------
-
-class CurrentUser(BaseModel):
-    id: int
-    username: str
-    name: str
-    role: str  # "manager" | "viewer"
-
-
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> CurrentUser:
-    cred_exc = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
-        raise cred_exc
-
-    sub = payload.get("sub")
-    if not sub:
-        raise cred_exc
-
-    # sub can be user id OR username/email depending on how you implemented login
-    user = None
-    try:
-        user_id = int(sub)
-        user = db.get(UserModel, user_id)
-    except Exception:
-        user = db.query(UserModel).filter(UserModel.username == str(sub)).first()
-
-    if not user:
-        raise cred_exc
-
-    return CurrentUser(
-        id=user.id,
-        username=user.username,
-        name=user.name,
-        role=user.role,
-    )
-
-
-def require_manager(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if user.role != "manager":
-        raise HTTPException(status_code=403, detail="Manager role required")
-    return user
 
 # ---------- AUDIT HELPERS ----------
 
@@ -381,7 +321,7 @@ def reorder_list(
     db: Session = Depends(get_db),
     _user: CurrentUser = Depends(get_current_user),
 ):
-    items: list[ReorderItem] = []
+    items: List[ReorderItem] = []
 
     products = (
         db.query(ProductModel)

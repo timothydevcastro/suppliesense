@@ -29,11 +29,11 @@ class UserOut(BaseModel):
 
 class LoginOut(BaseModel):
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "Bearer"  # ✅ standard scheme is "Bearer"
     user: UserOut
 
 
-# ✅ KEEP: JSON login (your curl + Try it out works)
+# ✅ JSON login (frontend uses this)
 @router.post("/login", response_model=LoginOut)
 def login(payload: LoginIn, db: Session = Depends(get_db)):
     username = payload.username.strip()
@@ -50,7 +50,7 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
     )
 
 
-# ✅ ADD: OAuth2 form endpoint (Swagger Authorize uses this)
+# ✅ Swagger "Authorize" uses this (OAuth2 form)
 @router.post("/token", response_model=LoginOut)
 def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     username = (form_data.username or "").strip()

@@ -1,3 +1,5 @@
+# backend/app/core/security.py
+
 import os
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -8,8 +10,18 @@ from passlib.context import CryptContext
 # ✅ ONLY pbkdf2_sha256 (no bcrypt anywhere)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or "dev-secret-change-me"
-ALGORITHM = "HS256"
+# ✅ IMPORTANT: use ONE secret everywhere (routes.py + deps_auth.py + auth_routes.py)
+# Put this on Render as JWT_SECRET_KEY
+SECRET_KEY = (
+    os.getenv("JWT_SECRET_KEY")
+    or os.getenv("JWT_SECRET")
+    or os.getenv("SECRET_KEY")
+    or "dev-secret-change-me"
+)
+
+# ✅ keep algorithm consistent too
+ALGORITHM = os.getenv("JWT_ALGORITHM") or "HS256"
+
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
 
 
