@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 
-import { authHeaders, clearAuth, getUser, type AuthUser } from "@/lib/auth";
+import { authHeaders, clearAuth, getToken, getUser, type AuthUser } from "@/lib/auth";
 
 type Product = {
   id: string;
@@ -253,8 +253,17 @@ export default function Home() {
     return h;
   }
 
-  async function fetchWithAuth(input: RequestInfo | URL, init?: RequestInit) {
-    const res = await fetch(input, init);
+  async function fetchWithAuth(input: RequestInfo | URL, init: RequestInit = {}) {
+    // Force Authorization + X-Actor (never rely on callers to pass headers correctly)
+    const merged = new Headers(init.headers);
+
+    const authH = new Headers(makeHeaders(false));
+    authH.forEach((v, k) => {
+      if (!merged.has(k)) merged.set(k, v);
+    });
+
+    const res = await fetch(input, { ...init, headers: merged });
+
     if (res.status === 401) {
       redirectToLogin();
       throw new Error("Session expired. Please login again.");
@@ -554,15 +563,19 @@ export default function Home() {
     setHistoryLoading(false);
   }
 
-  // ✅ Require login for this page
   useEffect(() => {
     const u = getUser();
-    if (!u) {
+    const t = getToken();
+
+    // You need BOTH user + token. Your screenshot shows localStorage empty => token missing.
+    if (!u || !t) {
       router.replace("/login");
       return;
     }
+
     setAuthUser(u);
   }, [router]);
+
 
   // Load after authUser is known (prevents instant 401 spam)
   useEffect(() => {
